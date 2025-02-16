@@ -1,0 +1,22 @@
+{
+  "name": "@opengeometry/openglyph",
+  "version": "0.0.1",
+  "description": "Glyph Manager for Threejs Applications",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "vite",
+    "build:example": "vite build --base ./example",
+    "build:lib": "tsc"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "three": "^0.173.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.173.0",
+    "vite": "^6.1.0"
+  }
+}

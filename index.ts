@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Font, FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
-import { OpenGeometry } from '../../kernel/dist';
+// import { OpenGeometry } from '../../kernel/dist';
 
 /**
  * Note: If Camera Controls is being used, it adds cursor default property to `app` remove it
@@ -8,7 +8,7 @@ import { OpenGeometry } from '../../kernel/dist';
 
 interface GlyphNodesOptions {
   geometry: THREE.ShapeGeometry;
-  color: string;
+  color: number;
   text: string;
   staticZoom: boolean;
 }
@@ -164,6 +164,7 @@ export class GlyphNode extends THREE.Group {
   isDragging: boolean = false;
   
   private text: string;
+  fontSize: number = 1;
 
   // Meshes and Helper Mesh
   textMesh: THREE.Mesh;
@@ -194,18 +195,45 @@ export class GlyphNode extends THREE.Group {
     this.add(this.boundMesh);
     this.add(this.textMesh);
   }
+
+  updateText(textGeometry: THREE.ShapeGeometry, text: string) {
+    this.text = text;
+    this.remove(this.textMesh);
+    this.remove(this.boundMesh);
+
+    textGeometry.computeBoundingBox();
+    if (!textGeometry.boundingBox) {
+      throw new Error('BoundingBox is null');
+    }
+    
+    const xMid = -0.5 * (textGeometry.boundingBox.max.x - textGeometry.boundingBox.min.x);
+    const yMid = -0.5 * (textGeometry.boundingBox.max.y - textGeometry.boundingBox.min.y);
+    const zMid = -0.5 * (textGeometry.boundingBox.max.z - textGeometry.boundingBox.min.z);
+    textGeometry.translate( xMid, yMid, zMid );
+
+    const material = new THREE.MeshBasicMaterial({ color: this.options.color, side: THREE.DoubleSide });
+    this.textMesh = new THREE.Mesh(textGeometry, material);
+    textGeometry.computeBoundingBox();
+
+    this.boundMesh = new BoundingMesh(this.textMesh, this);
+    this.add(this.textMesh);
+    this.add(this.boundMesh);
+  }
 }
+
+export type fontType = 'Imprima_Regular' | 'OpenSans_Regular' | 'Roboto_Regular';
 
 class _GlyphManager {
   private _scene: THREE.Scene | null = null;
   private _camera: THREE.PerspectiveCamera | null = null;
-  private _openGeometry: OpenGeometry | null = null;
+  // private _openGeometry: OpenGeometry | null = null;
 
   private loader: FontLoader = new FontLoader();
 
   private _glyphNodes: Map<string, GlyphNode> = new Map();
 
   private _currentFont: Font | null = null;
+  private _currentFontFace: fontType = 'Imprima_Regular';
   private _selectorBox: THREE.Group = new THREE.Group();
 
   private selectorBoxes: THREE.Mesh[] = [];
@@ -258,8 +286,6 @@ class _GlyphManager {
     lineABMesh.name = 'debug-line-ab';
     this._glyphSelectorHelper.debugMesh.add(lineABMesh);
     this._glyphSelectorHelper.debugMesh.add(lineACMesh);
-
-    console.log(this._scene);
   }
 
   set camera(camera: THREE.PerspectiveCamera) {
@@ -268,25 +294,49 @@ class _GlyphManager {
     this.setupEvents();
   }
 
-  set openGeometry(openGeometry: OpenGeometry) {
-    this._openGeometry = openGeometry;
-  }
+  // set openGeometry(openGeometry: OpenGeometry) {
+  //   this._openGeometry = openGeometry;
+  // }
 
-  get openGeometry() {
-    if (!this._openGeometry) {
-      throw new Error('OpenGeometry not assigned');
+  // get openGeometry() {
+  //   if (!this._openGeometry) {
+  //     throw new Error('OpenGeometry not assigned');
+  //   }
+  //   return this._openGeometry;
+  // }
+
+  set fontFace(fontFace: fontType) {
+    switch (fontFace) {
+      case 'Imprima_Regular':
+        this.loader.load('./fontFaces/Imprima_Regular.json', (font) => {
+          this._currentFont = font;
+        });
+        break;
+      case 'OpenSans_Regular':
+        this.loader.load('./fontFaces/OpenSans_Regular.json', (font) => {
+          this._currentFont = font;
+        });
+        break;
+      case 'Roboto_Regular':
+        this.loader.load('./fontFaces/Roboto_Regular.json', (font) => {
+          this._currentFont = font;
+        });
+        break;
+      default:
+        this.loader.load('./fontFaces/Imprima_Regular.json', (font) => {
+          this._currentFont = font;
+        });
+        break;
     }
-    return this._openGeometry;
+
+    this._currentFontFace = fontFace;
   }
 
-  constructor() {
-    this.loader.load('./Imprima_Regular.json', (font) => {
-      this._currentFont = font;
-    });
+  get fontFace() {
+    return this._currentFontFace;
   }
 
   setupEvents() {
-    console.log('Setting up events');
     this.setupTransformation();
   }
 
@@ -333,7 +383,7 @@ class _GlyphManager {
     return this._glyphNodes;
   }
 
-  addGlyph(text: string, size: number, color: string, staticZoom: boolean = true) {
+  addGlyph(text: string, size: number, color: number, staticZoom: boolean = true) {
     this.checkAssigmnet();
 
     const shape = this._currentFont?.generateShapes(text, size * 0.1);
@@ -345,6 +395,9 @@ class _GlyphManager {
       color: color,
       staticZoom: staticZoom
     });
+
+    // It is important to set the size of the glyph node, so that it can be used for scaling and editing later
+    glyphNodes.fontSize = size;
 
     glyphNodes.rotation.x = -(Math.PI / 2);
     glyphNodes.updateMatrixWorld(true);
@@ -358,8 +411,35 @@ class _GlyphManager {
     return glyphNodes;
   }
 
-  setupTransformation() {
+  updateGlyphText(id: string, text: string) {
+    this.checkAssigmnet();
 
+    const glyphNode = this._glyphNodes.get(id);
+    if (!glyphNode) throw new Error('Glyph Node not found');
+
+    // remove selector boxes
+    for (const region of glyphNode.boundMesh.helperRegionsBox) {
+      this.selectorBoxes = this.selectorBoxes.filter((box) => box.uuid !== region.uuid);
+    }
+
+    const isEditingActive = glyphNode.boundMesh.enableEditing;
+
+    const shape = this._currentFont?.generateShapes(text, glyphNode.fontSize * 0.1);
+    const geometry = new THREE.ShapeGeometry(shape);
+    glyphNode.updateText(geometry, text);
+
+    // Add Selector Boxes
+    for (const region of glyphNode.boundMesh.helperRegionsBox) {
+      this.selectorBoxes.push(region);
+    }
+
+    // If Editing is Active, re-enable it
+    if (isEditingActive) {
+      this.selectGlyph(id);
+    }
+  }
+
+  setupTransformation() {
     // For Changing Cursor
     window.addEventListener("mousemove", (event) => {
       const pointer = new THREE.Vector2();
@@ -372,6 +452,13 @@ class _GlyphManager {
       const intersects = this.glyphCaster.intersectObjects(this.selectorBoxes);
       if (intersects.length > 0) {
         const object = intersects[0].object;
+
+        // If Glyph is not selected, disable mousemove
+        if (object.userData.glyphNode.uuid !== this._selectedGlyph?.uuid) {
+          document.body.style.cursor = "default";
+          return;
+        }
+
         if (object.name === 'left-top-rot-region' || object.name === 'right-top-rot-region' || object.name === 'left-bottom-rot-region' || object.name === 'right-bottom-rot-region') {
           document.body.style.cursor = `url('https://opengeometry-43705.web.app/Open-Plans-Resources/${object.name}-cursor.png') 10 10, default`;
           this._selectedRotRegion = object.name;
@@ -387,7 +474,6 @@ class _GlyphManager {
       if (intersectsGround.length > 0) {
         document.body.style.cursor = `url('https://opengeometry-43705.web.app/Open-Plans-Resources/${this._selectedRotRegion}-cursor.png') 10 10, default`;
         const point = intersectsGround[0].point;
-        console.log(point);
 
         // Direction Mesh
         const rotMesh = this._selectedGlyph?.boundMesh.helperRegionsBox.find((mesh) => mesh.name === this._selectedRotRegion);
@@ -427,6 +513,13 @@ class _GlyphManager {
       const intersects = this.glyphCaster.intersectObjects(this.selectorBoxes);
       if (intersects.length > 0) {
         const object = intersects[0].object;
+
+        // If Glyph is not selected, disable mousedown
+        if (object.userData.glyphNode.uuid !== this._selectedGlyph?.uuid) {
+          document.body.style.cursor = "default";
+          return;
+        }
+
         if (object.name === 'left-top-rot-region' || object.name === 'right-top-rot-region' || object.name === 'left-bottom-rot-region' || object.name === 'right-bottom-rot-region') {
           this._isEditing = true;
           this._selectedGlyph = object.userData.glyphNode;
@@ -474,10 +567,15 @@ class _GlyphManager {
     this._glyphSelectorHelper.debugMesh.getObjectByName('debug-node-center')?.position.copy(center);
   }
 
+  /**
+   * Clear All Selections
+   */
   clearSelection() {
     if (this._selectedGlyph) {
       this._selectedGlyph.boundMesh.enableEditing = false;
       this._selectedGlyph = null;
+      console.log('Cleared Selection');
+      console.log(this._selectedGlyph);
     }
   }
 
@@ -508,6 +606,10 @@ class _GlyphManager {
     
     const radians = angle * Math.PI / 180;
     glyphNode.rotation.z = radians;
+  }
+
+  getGlyph(id: string): GlyphNode | undefined {
+    return this._glyphNodes.get(id);
   }
 }
 
