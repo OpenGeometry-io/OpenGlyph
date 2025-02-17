@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Open Glyphs</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="OpenGeometry Demo">
+  <meta name="author" content="Vishwajeet Mane">
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+    #app {
+      width: 100%;
+      height: 100vh;
+      cursor: unset!important;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+  </div>
+  <script type="module">
+    import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+    import { GlyphNode, Glyphs } from './../src/index.ts';
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+
+    let glyphManager;
+
+    async function init() {
+      const container = document.getElementById('app');
+      
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      const renderer = new THREE.WebGLRenderer({
+        antialias: true,
+      });
+      renderer.setClearColor(0xffffff, 1);
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      container.appendChild(renderer.domElement);
+
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.25;
+      controls.enableRotate = false;
+      camera.position.y = 5;
+
+      await Glyphs.loadFaces('Source_Code_Pro_Regular');
+
+      Glyphs.scene = scene;
+      Glyphs.camera = camera;
+      const glyph = Glyphs.addGlyph("Hey eejit 0887", 3, 0x5D0E41, true);
+
+      const glyph2 = Glyphs.addGlyph("How are you?", 2, 0x5D0E41, true);
+      glyph2.position.set(0, 0, 1);
+
+      window.addEventListener('resize', () => {
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+      });
+
+      function animate() {
+        requestAnimationFrame(animate);
+        renderer.render(scene, camera);
+        controls.update();
+        Glyphs.updateManager(camera);
+      }
+
+      animate();
+    }
+
+    function setUI() {
+      const gui = new GUI();
+      const glypNodes = Glyphs.glyphNodes;
+      console.log(glypNodes);
+      const glyphControls = {
+        color: '#adb5bd',
+        rotation: 0,
+        select: false,
+        text: '',
+        axes: 'x',
+      };
+
+      const glyphFolder = gui.addFolder('Glyph');
+      glyphFolder.addColor(glyphControls, 'color').name('Color').onChange((value) => {
+        glypNodes.forEach((node) => {
+          // openPlans.rotateGlyph(node.key, 45);
+        });
+      });
+      glyphFolder.add(glyphControls, 'rotation', 0, 360).name('Rotation').onChange((value) => {
+        glypNodes.forEach((node) => {
+          Glyphs.rotateGlyph(node.uuid, value);
+        });
+      });
+      glyphFolder.add(glyphControls, 'select').name('Select').onChange((value) => {
+        if (value) {
+          glypNodes.forEach((node) => {
+            Glyphs.selectGlyph(node.uuid);
+          });
+        } else {
+          Glyphs.clearSelection();
+        }
+      });
+
+      // TODO: Change Axes
+      // glyphFolder.add(glyphControls, 'axes', ['x', 'y', 'z']).name('Axes').onChange((value) => {
+      //   glypNodes.forEach((node) => {
+      //     Glyphs.axes = value;
+      //   });
+      // });
+
+      glypNodes.forEach((glyphNode) => {
+        const subGlyph = glyphFolder.addFolder(glyphNode.text);
+        glyphControls.text = glyphNode.text;
+
+        // Changing Color of Glyph
+        // subGlyph.addColor(glyphControls, 'color').name('Color').onChange((value) => {
+        //   openPlans.changeGlyphColor(node.uuid, value);
+        // });
+
+        // Rotating Glyph
+        subGlyph.add(glyphControls, 'rotation', 0, 360).name('Rotation').onChange((value) => {
+          Glyphs.rotateGlyph(glyphNode.uuid, value);
+        });
+
+        // Selecting Glyph
+        subGlyph.add(glyphControls, 'select').name('Select').onChange((value) => {
+          console.log(value);
+          if (value) {
+            Glyphs.selectGlyph(glyphNode.uuid);
+          } else {
+            Glyphs.clearSelection();
+          }
+        });
+
+        // Changing Text of Glyph
+        subGlyph.add(glyphControls, 'text').name('Text').onChange((value) => {
+          Glyphs.updateGlyphText(glyphNode.uuid, value);
+        });
+      });
+    }
+
+    (async () => {
+      await init();
+      setUI();
+    })();
+  </script>
+</body>
+</html>

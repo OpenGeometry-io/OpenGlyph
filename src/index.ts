@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { Font, FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
-// import { OpenGeometry } from '../../kernel/dist';
 
 /**
  * Note: If Camera Controls is being used, it adds cursor default property to `app` remove it
@@ -155,6 +154,11 @@ class BoundingMesh extends THREE.Mesh {
     rightBottomMesh.add(rightBottomRotMesh);
 
     this.add(rightBottomMesh);
+
+    // Debug: Hide Helper Regions
+    for (const region of this.helperRegionsBox) {
+      region.visible = false;
+    }
   }
 }
 
@@ -222,11 +226,11 @@ export class GlyphNode extends THREE.Group {
 }
 
 export type fontType = 'Imprima_Regular' | 'Source_Code_Pro_Regular' | 'Roboto_Regular';
+export type axesType = "x" | "y" | "z";
 
 class _GlyphManager {
   private _scene: THREE.Scene | null = null;
   private _camera: THREE.PerspectiveCamera | null = null;
-  // private _openGeometry: OpenGeometry | null = null;
 
   private loader: FontLoader = new FontLoader();
 
@@ -262,6 +266,48 @@ class _GlyphManager {
   }
 
   private glyphCaster = new THREE.Raycaster();
+  private _canvasDimensions: { width: number, height: number } = { width: 100, height: 100 };
+  private _glyphGround: THREE.Mesh = new THREE.Mesh();
+
+  // TODO 1: Based on the Axes, set the rotation of the Glyph Ground
+  // TODO 2: Based on the Axes, set the rotation of the Glyph Nodes (IMP)
+  set axes(axes: axesType) {
+    this._glyphGround.rotation.set(0, 0, 0);
+    switch (axes) {
+      case "x":
+        this._glyphGround.rotation.x = -(Math.PI / 2);
+        break;
+      case "y":
+        this._glyphGround.rotation.y = -(Math.PI / 2);
+        break;
+      case "z":
+        this._glyphGround.rotation.z = -(Math.PI / 2);
+        break;
+      default:
+        break;
+    }
+  }
+
+  set canvasDimensions(size: { width: number, height: number }) {
+    this._canvasDimensions = size;
+
+    if (!this._scene) return;
+
+    if (this._glyphGround) {
+      this._scene.remove(this._glyphGround);
+    }
+
+    const groundGeometry = new THREE.PlaneGeometry(this.canvasDimensions.width, this.canvasDimensions.height);
+    const groundMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, side: THREE.DoubleSide });
+    this._glyphGround = new THREE.Mesh(groundGeometry, groundMaterial);
+    this._glyphGround.rotation.x = -(Math.PI / 2);
+    this._glyphGround.name = 'glyph-ground';
+    this._scene.add(this._glyphGround);
+  }
+
+  get canvasDimensions() {
+    return this._canvasDimensions;
+  }
 
   set scene(scene: THREE.Scene) {
     this._scene = scene;
@@ -269,7 +315,7 @@ class _GlyphManager {
     this._scene.add(this._selectorBox);
     this._scene.add(this._glyphSelectorHelper.debugMesh);
 
-    // Delete This Later
+    // TODO: Delete This Later
     const debugNodeCenter = new THREE.Mesh(new THREE.SphereGeometry(0.01), new THREE.MeshBasicMaterial({ color: 0x0000ff }));
     debugNodeCenter.name = 'debug-node-center';
     this._glyphSelectorHelper.debugMesh.add(debugNodeCenter);
@@ -286,6 +332,17 @@ class _GlyphManager {
     lineABMesh.name = 'debug-line-ab';
     this._glyphSelectorHelper.debugMesh.add(lineABMesh);
     this._glyphSelectorHelper.debugMesh.add(lineACMesh);
+    
+    // Hide Debug Mesh
+    this._glyphSelectorHelper.debugMesh.visible = false;
+
+    // Glyph Ground
+    const groundGeometry = new THREE.PlaneGeometry(this.canvasDimensions.width, this.canvasDimensions.height);
+    const groundMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, side: THREE.DoubleSide, transparent: true, opacity: 0 });
+    this._glyphGround = new THREE.Mesh(groundGeometry, groundMaterial);
+    this._glyphGround.rotation.x = -(Math.PI / 2);
+    this._glyphGround.name = 'glyph-ground';
+    this._scene.add(this._glyphGround);
   }
 
   set camera(camera: THREE.PerspectiveCamera) {
@@ -464,7 +521,7 @@ class _GlyphManager {
       // If Editing is Enabled
       if (!this._isEditing) return;
 
-      const intersectsGround = this.glyphCaster.intersectObjects([this._scene.getObjectByName('pencil-ground') as THREE.Mesh]);
+      const intersectsGround = this.glyphCaster.intersectObjects([this._scene.getObjectByName('glyph-ground') as THREE.Mesh]);
       if (intersectsGround.length > 0) {
         document.body.style.cursor = `url('https://opengeometry-43705.web.app/Open-Plans-Resources/${this._selectedRotRegion}-cursor.png') 10 10, default`;
         const point = intersectsGround[0].point;
@@ -490,7 +547,6 @@ class _GlyphManager {
         const angle = ((lineAB.clone().cross(lineAC).y < 0 ? 1 : -1) * Math.acos(lineAB.dot(lineAC)) * 180 / Math.PI);
 
         const baseAngle = this._selectedGlyph?.baseRotation as number;
-        console.log(`Base Angle: ${baseAngle}`);
         this._tempAngle = angle;
         this.rotateGlyph(this._selectedGlyph?.uuid as string, baseAngle + angle);
       }
@@ -538,7 +594,6 @@ class _GlyphManager {
         this._selectedGlyph.isDragging = false;
         this._selectedGlyph.baseRotation += this._tempAngle;
         this._tempAngle = 0;
-        console.log(`Base Angle: ${this._selectedGlyph.baseRotation}`);
       }
 
     });
@@ -568,7 +623,6 @@ class _GlyphManager {
     if (this._selectedGlyph) {
       this._selectedGlyph.boundMesh.enableEditing = false;
       this._selectedGlyph = null;
-      console.log(this._selectedGlyph);
     }
   }
 
