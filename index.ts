@@ -221,7 +221,7 @@ export class GlyphNode extends THREE.Group {
   }
 }
 
-export type fontType = 'Imprima_Regular' | 'JetBrains_Mono_Regular' | 'Roboto_Regular';
+export type fontType = 'Imprima_Regular' | 'Source_Code_Pro_Regular' | 'Roboto_Regular';
 
 class _GlyphManager {
   private _scene: THREE.Scene | null = null;
@@ -302,10 +302,10 @@ class _GlyphManager {
         const fontImprima = await fetchImprima.json();
         this._currentFont = this.loader.parse(fontImprima);
         break;
-      case 'JetBrains_Mono_Regular':
-        const fetchJetBrains = await fetch('https://raw.githubusercontent.com/OpenGeometry-io/OpenGlyph/refs/heads/main/fontFaces/JetBrains_Mono_Regular.json');
-        const fontJetBrains = await fetchJetBrains.json();
-        this._currentFont = this.loader.parse(fontJetBrains);
+      case 'Source_Code_Pro_Regular':
+        const fetchSourceCode = await fetch('https://raw.githubusercontent.com/OpenGeometry-io/OpenGlyph/refs/heads/main/fontFaces/Source_Code_Pro_Regular.json');
+        const fontSourceCode = await fetchSourceCode.json();
+        this._currentFont = this.loader.parse(fontSourceCode);
         break;
       case 'Roboto_Regular':
         const fetchRoboto = await fetch('https://raw.githubusercontent.com/OpenGeometry-io/OpenGlyph/refs/heads/main/fontFaces/Roboto_Regular.json');
