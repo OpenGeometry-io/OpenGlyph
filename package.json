@@ -1,6 +1,6 @@
 {
   "name": "@opengeometry/openglyph",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Glyph Manager for Threejs Applications",
   "main": "index.js",
   "type": "module",
