@@ -25,6 +25,7 @@
     import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
     import { GlyphNode, Glyphs } from './../index.ts';
     import * as THREE from 'three';
+    import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
     let glyphManager;
 
@@ -41,13 +42,17 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
       container.appendChild(renderer.domElement);
 
-      const geometry = new THREE.BoxGeometry();
-      const material = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true });
-      const cube = new THREE.Mesh(geometry, material);
-      scene.add(cube);
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.25;
+
+      // const geometry = new THREE.BoxGeometry();
+      // const material = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true });
+      // const cube = new THREE.Mesh(geometry, material);
+      // scene.add(cube);
 
       // Camera position
-      camera.position.y = 15;
+      camera.position.y = 5;
 
       // const glyph = openPlans.createGlyph({
       //   name: 'glyph',
@@ -59,19 +64,11 @@
       //   font: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js/examples/fonts/helvetiker_regular.typeface.json',
       // });
 
+      await Glyphs.loadFaces();
+
       Glyphs.scene = scene;
       Glyphs.camera = camera;
-      Glyphs.fontFace = 'Imprima_Regular';
-      const glyph = Glyphs.addGlyph(`Break Free`, 5, 0x5D0E41, false);
-      // glyph.position.set(0, 0, 1);
-      // // openPlans.rotateGlyph(glyph.uuid, 45);
-
-      // // openPlans.rotateGlyph(glyph.uuid, 45);
-      // // openPlans.selectGlyph(glyph.uuid);
-
-      // const glyph2 = openPlans.glyph('OpenGeometry 0.1', 10, 0xFF204E);
-      // glyph2.position.set(0, 0, -2);
-      // openPlans.selectGlyph(glyph2.uuid);
+      const glyph = Glyphs.addGlyph("Hey eejit 0887", 3, 0x5D0E41, true);
 
       window.addEventListener('resize', () => {
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -79,12 +76,11 @@
         camera.updateProjectionMatrix();
       });
 
-
       function animate() {
         requestAnimationFrame(animate);
-        cube.rotation.x += 0.01;
-        cube.rotation.y += 0.01;
         renderer.render(scene, camera);
+        controls.update();
+        Glyphs.updateManager(camera);
       }
 
       animate();

@@ -221,7 +221,7 @@ export class GlyphNode extends THREE.Group {
   }
 }
 
-export type fontType = 'Imprima_Regular' | 'OpenSans_Regular' | 'Roboto_Regular';
+export type fontType = 'Imprima_Regular' | 'JetBrains_Mono_Regular' | 'Roboto_Regular';
 
 class _GlyphManager {
   private _scene: THREE.Scene | null = null;
@@ -294,42 +294,32 @@ class _GlyphManager {
     this.setupEvents();
   }
 
-  // set openGeometry(openGeometry: OpenGeometry) {
-  //   this._openGeometry = openGeometry;
-  // }
-
-  // get openGeometry() {
-  //   if (!this._openGeometry) {
-  //     throw new Error('OpenGeometry not assigned');
-  //   }
-  //   return this._openGeometry;
-  // }
-
-  set fontFace(fontFace: fontType) {
+  // TODO: Load Font Faces with Different Font Types
+  async loadFaces(fontFace?: fontType) {
     switch (fontFace) {
       case 'Imprima_Regular':
-        this.loader.load('./fontFaces/Imprima_Regular.json', (font) => {
-          this._currentFont = font;
-        });
+        const fetchImprima = await fetch('https://raw.githubusercontent.com/OpenGeometry-io/OpenGlyph/refs/heads/main/fontFaces/Imprima_Regular.json');
+        const fontImprima = await fetchImprima.json();
+        this._currentFont = this.loader.parse(fontImprima);
         break;
-      case 'OpenSans_Regular':
-        this.loader.load('./fontFaces/OpenSans_Regular.json', (font) => {
-          this._currentFont = font;
-        });
+      case 'JetBrains_Mono_Regular':
+        const fetchJetBrains = await fetch('https://raw.githubusercontent.com/OpenGeometry-io/OpenGlyph/refs/heads/main/fontFaces/JetBrains_Mono_Regular.json');
+        const fontJetBrains = await fetchJetBrains.json();
+        this._currentFont = this.loader.parse(fontJetBrains);
         break;
       case 'Roboto_Regular':
-        this.loader.load('./fontFaces/Roboto_Regular.json', (font) => {
-          this._currentFont = font;
-        });
+        const fetchRoboto = await fetch('https://raw.githubusercontent.com/OpenGeometry-io/OpenGlyph/refs/heads/main/fontFaces/Roboto_Regular.json');
+        const fontRoboto = await fetchRoboto.json();
+        this._currentFont = this.loader.parse(fontRoboto);
         break;
       default:
-        this.loader.load('./fontFaces/Imprima_Regular.json', (font) => {
-          this._currentFont = font;
-        });
+        const localFetch = await fetch('https://raw.githubusercontent.com/OpenGeometry-io/OpenGlyph/refs/heads/main/fontFaces/Imprima_Regular.json');
+        const localFont = await localFetch.json();
+        this._currentFont = this.loader.parse(localFont);
         break;
     }
 
-    this._currentFontFace = fontFace;
+    this._currentFontFace = fontFace ? fontFace : 'Imprima_Regular';
   }
 
   get fontFace() {
@@ -401,7 +391,11 @@ class _GlyphManager {
 
     glyphNodes.rotation.x = -(Math.PI / 2);
     glyphNodes.updateMatrixWorld(true);
-    this._scene?.add(glyphNodes);
+    
+    if (this._scene) {
+      this._scene.add(glyphNodes);
+    }
+
     this._glyphNodes.set(glyphNodes.uuid, glyphNodes);
 
     for (const region of glyphNodes.boundMesh.helperRegionsBox) {
@@ -574,7 +568,6 @@ class _GlyphManager {
     if (this._selectedGlyph) {
       this._selectedGlyph.boundMesh.enableEditing = false;
       this._selectedGlyph = null;
-      console.log('Cleared Selection');
       console.log(this._selectedGlyph);
     }
   }
