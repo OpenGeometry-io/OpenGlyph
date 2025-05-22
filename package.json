@@ -1,8 +1,9 @@
 {
   "name": "@opengeometry/openglyph",
-  "version": "0.0.2",
+  "version": "0.0.6",
   "description": "Glyph Manager for Threejs Applications",
   "main": "index.js",
+  "types": "./types/index.d.ts",
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",

@@ -167,7 +167,7 @@ export class GlyphNode extends THREE.Group {
   baseRotation: number = 0;
   isDragging: boolean = false;
   
-  private text: string;
+  text: string;
   fontSize: number = 1;
 
   // Meshes and Helper Mesh
