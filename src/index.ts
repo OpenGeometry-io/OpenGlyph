@@ -225,7 +225,7 @@ export class GlyphNode extends THREE.Group {
   }
 }
 
-export type fontType = 'Imprima_Regular' | 'Source_Code_Pro_Regular' | 'Roboto_Regular';
+export type fontType = 'Imprima_Regular' | 'Source_Code_Pro_Regular' | 'Roboto_Regular' | 'Edu_NSW_ACT_Foundation_Regular';
 export type axesType = "x" | "y" | "z";
 
 class _GlyphManager {
@@ -368,6 +368,11 @@ class _GlyphManager {
         const fetchRoboto = await fetch('https://raw.githubusercontent.com/OpenGeometry-io/OpenGlyph/refs/heads/main/fontFaces/Roboto_Regular.json');
         const fontRoboto = await fetchRoboto.json();
         this._currentFont = this.loader.parse(fontRoboto);
+        break;
+      case 'Edu_NSW_ACT_Foundation_Regular':
+        const fetchEdu = await fetch('https://raw.githubusercontent.com/OpenGeometry-io/OpenGlyph/refs/heads/main/fontFaces/Edu_NSW_ACT_Foundation_Regular.json');
+        const fontEdu = await fetchEdu.json();
+        this._currentFont = this.loader.parse(fontEdu);
         break;
       default:
         const localFetch = await fetch('https://raw.githubusercontent.com/OpenGeometry-io/OpenGlyph/refs/heads/main/fontFaces/Imprima_Regular.json');
